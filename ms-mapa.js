@@ -17,6 +17,8 @@ const CONFIG = {
 let br_map = null, states_map = null, states_arr = [];
 let br_map_filter = [], br_state_filter = [], municipiosData = {};
 let ups_data = [], incendios_data = [], incendiosPorMunicipio = {};
+let legendValues = [];
+let legendSelection = null;
 
 function parseCoord(str) {
     if (!str) return NaN;
@@ -163,12 +165,17 @@ function renderHeatmap() {
         tooltip.style('left', (tx + 16) + 'px').style('top', (ty - 12) + 'px');
     };
 
-    g.selectAll('.municipio').data(br_map_filter).enter().append('path')
+    const municipioPaths = g.selectAll('.municipio').data(br_map_filter).enter().append('path')
         .attr('class', 'municipio').attr('d', path)
-        .attr('fill', CONFIG.corSemDados)
+        .attr('fill', CONFIG.corSemDados).attr('fill-opacity', 0)
         .attr('stroke', '#fff').attr('stroke-width', 0.8)
         .on('mouseover', function(){ d3.select(this).attr('fill', '#d4d4d4'); })
         .on('mouseout', function(){ d3.select(this).attr('fill', CONFIG.corSemDados); });
+
+    municipioPaths.transition()
+        .duration(900)
+        .ease(d3.easeCubicOut)
+        .attr('fill-opacity', 1);
 
     const bubbles = Object.keys(incendiosPorMunicipio).map(cd => {
         const feat = br_map_filter.find(f => f.properties.CD_MUN === cd);
@@ -189,10 +196,10 @@ function renderHeatmap() {
     const maxI = d3.max(bubbles, d => d.total) || 1;
     const rScale = d3.scaleSqrt().domain([0, maxI]).range([4, 38]);
 
-    g.selectAll('.bubble').data(bubbles).enter().append('circle')
+    const bubbleSelection = g.selectAll('.bubble').data(bubbles).enter().append('circle')
         .attr('class', 'bubble')
-        .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => rScale(d.total))
-        .attr('fill', '#e53935').attr('fill-opacity', 0.55).attr('stroke', '#fff').attr('stroke-width', 1.5)
+        .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', 0)
+        .attr('fill', '#e53935').attr('fill-opacity', 0).attr('stroke', '#fff').attr('stroke-width', 1.5)
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
             d3.select(this).attr('stroke', '#333').attr('stroke-width', 2).attr('fill-opacity', 0.9).raise();
@@ -207,15 +214,26 @@ function renderHeatmap() {
             `);
 
             positionTooltip(d);
+            highlightLegend(d.total);
         })
-        .on('mousemove', function(event) {
+        .on('mousemove', function(event, d) {
             positionTooltip(d);
         })
         .on('mouseout', function(event, d) {
             d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.5).attr('fill-opacity', 0.55);
             tooltip.style('opacity', 0);
             activeBubble = null;
+            highlightLegend(null);
         });
+
+    const durationScale = d3.scaleLinear().domain([0, maxI]).range([650, 1700]);
+
+    bubbleSelection.transition()
+        .delay((d,i) => i * 10)
+        .duration(d => durationScale(d.total))
+        .ease(d3.easeBackOut)
+        .attr('r', d => rScale(d.total))
+        .attr('fill-opacity', 0.55);
 
     svg.append('text').attr('x', CONFIG.width/2).attr('y', 25).attr('text-anchor', 'middle')
         .attr('font-size', '18px').attr('font-weight', 'bold').attr('fill', '#222')
@@ -226,16 +244,18 @@ function renderHeatmap() {
 
 function renderProportionalLegend(svg, rScale, maxVal) {
     const values = [Math.max(1, Math.ceil(maxVal*0.1)), Math.ceil(maxVal*0.5), maxVal].filter((v,i,a)=> a.indexOf(v)===i);
+    legendValues = values;
     const lgX = CONFIG.width - 120, lgY = CONFIG.height - 40;
     const g = svg.append('g').attr('transform', `translate(${lgX}, ${lgY})`);
 
     g.append('text').attr('y', -(rScale(maxVal)*2) - 15).attr('text-anchor','middle')
      .attr('font-size','12px').attr('fill','#444').attr('font-weight', 'bold').text('Ocorrências');
 
-    g.selectAll('circle.legend-c').data(values).enter().append('circle')
+    legendSelection = g.selectAll('circle.legend-c').data(values).enter().append('circle')
      .attr('class', 'legend-c')
      .attr('cy', d => -rScale(d)).attr('r', d => rScale(d))
-     .attr('fill', 'none').attr('stroke', '#999').attr('stroke-dasharray', '2,2');
+     .attr('fill', 'none').attr('stroke', '#999').attr('stroke-dasharray', '2,2')
+     .attr('stroke-width', 1);
     
     g.selectAll('line.legend-l').data(values).enter().append('line')
      .attr('class', 'legend-l')
@@ -246,6 +266,18 @@ function renderProportionalLegend(svg, rScale, maxVal) {
      .attr('class', 'val')
      .attr('x', 50).attr('y', d => -rScale(d)*2 + 4)
      .attr('font-size', '11px').attr('fill', '#444').text(d => d);
+}
+
+function highlightLegend(total) {
+    if (!legendSelection || !legendValues.length) return;
+    const target = total == null ? null : legendValues.reduce((prev, curr) => {
+        return Math.abs(curr - total) < Math.abs(prev - total) ? curr : prev;
+    }, legendValues[0]);
+
+    legendSelection
+        .attr('stroke', d => (target !== null && d === target ? '#111' : '#999'))
+        .attr('stroke-width', d => (target !== null && d === target ? 3 : 1))
+        .attr('stroke-dasharray', d => (target !== null && d === target ? '0' : '2,2'));
 }
 
 function showLoading(msg) {
