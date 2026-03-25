@@ -50,7 +50,8 @@
         #map-container { position: relative; }
         #state-map-container { margin-bottom: 12px; }
 
-        svg { display: block; margin: 0 auto; }
+        svg { display: block; margin: 0 auto; cursor: grab; }
+        svg:active { cursor: grabbing; }
 
         .municipio {
             stroke: #fff;
@@ -218,6 +219,13 @@
                     <div class="bubble-circle" style="width: 22px; height: 22px;"></div>
                 </div>
                 <p style="font-size:10px; color:#777; margin-top:8px;">O tamanho aumenta com focos próximos</p>
+            </div>
+
+            <div class="bubble-info">
+                <h4>Interação do Mapa</h4>
+                <p style="font-size:11px; color:#666; margin-bottom:8px;"><strong>Zoom:</strong> Use a roda do mouse</p>
+                <p style="font-size:11px; color:#666; margin-bottom:8px;"><strong>Pan:</strong> Clique e arraste o mapa</p>
+                <p style="font-size:10px; color:#999;">Zoom máximo: 8x</p>
             </div>
         </div>
 

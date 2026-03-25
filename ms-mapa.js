@@ -138,10 +138,30 @@ function renderHeatmap() {
     const proj = d3.geoMercator().fitSize([CONFIG.width-60, CONFIG.height-80], { type: "FeatureCollection", features: br_map_filter });
     const path = d3.geoPath().projection(proj);
 
-    const g = svg.append('g').attr('transform', 'translate(30, 40)');
+    const gZoom = svg.append('g');
+    
+    const g = gZoom.append('g').attr('transform', 'translate(30, 40)');
+
+    const zoom = d3.zoom()
+        .scaleExtent([1, 5]) 
+        .translateExtent([[0, 0], [CONFIG.width, CONFIG.height]])
+        .on('zoom', (event) => {
+            gZoom.attr('transform', event.transform);
+            if (activeBubble) positionTooltip(activeBubble);
+        });
+    
+    svg.call(zoom);
     
     let tooltip = d3.select(cont).select('.tooltip');
     if(tooltip.empty()) tooltip = d3.select(cont).append('div').attr('class', 'tooltip');
+
+    let activeBubble = null; 
+
+    const positionTooltip = (d) => {
+        const t = d3.zoomTransform(svg.node());
+        const [tx, ty] = t.apply([d.x + 30, d.y + 40]);
+        tooltip.style('left', (tx + 16) + 'px').style('top', (ty - 12) + 'px');
+    };
 
     g.selectAll('.municipio').data(br_map_filter).enter().append('path')
         .attr('class', 'municipio').attr('d', path)
@@ -177,6 +197,7 @@ function renderHeatmap() {
         .on('mouseover', function(event, d) {
             d3.select(this).attr('stroke', '#333').attr('stroke-width', 2).attr('fill-opacity', 0.9).raise();
             
+            activeBubble = d;
             tooltip.style('opacity', 1).html(`
                <strong>🔥 ${d.nome}</strong>
                <div class="tt-row"><span>Ocorrências unidas:</span><b>${d.total}</b></div>
@@ -184,14 +205,16 @@ function renderHeatmap() {
                <div class="tt-row"><span>UPs com focos:</span><b>${d.upsCount}</b></div>
                ${d.micro ? `<div class="tt-row"><span>Região:</span><b>${d.micro}</b></div>`:''}
             `);
+
+            positionTooltip(d);
         })
         .on('mousemove', function(event) {
-            const [x, y] = d3.pointer(event, cont);
-            tooltip.style('left', (x + 16) + 'px').style('top', (y - 12) + 'px');
+            positionTooltip(d);
         })
         .on('mouseout', function(event, d) {
             d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.5).attr('fill-opacity', 0.55);
             tooltip.style('opacity', 0);
+            activeBubble = null;
         });
 
     svg.append('text').attr('x', CONFIG.width/2).attr('y', 25).attr('text-anchor', 'middle')
