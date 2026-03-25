@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Mato Grosso do Sul - D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 { color: #fff; margin-bottom: 6px; text-align: center; }
+        .subtitle { color: #a0a0a0; margin-bottom: 18px; font-size: 13px; }
+        .subtitle a { color: #fc8d59; text-decoration: none; }
+        .subtitle a:hover { text-decoration: underline; }
+
+        .main-layout {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            background: #fafafa;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+            padding: 16px;
+            max-width: 100%;
+        }
+
+        .side-panel {
+            background: #fafafa;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+            padding: 16px;
+            width: 300px;
+        }
+
+        #map-container { position: relative; }
+        #state-map-container { margin-bottom: 12px; }
+
+        svg { display: block; margin: 0 auto; }
+
+        .municipio {
+            stroke: #fff;
+            stroke-width: 0.5px;
+            cursor: pointer;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(15,15,15,0.92);
+            color: #f0f0f0;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 1000;
+            min-width: 210px;
+            border-left: 4px solid #bd0026;
+        }
+        .tooltip strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #fc8d59;
+        }
+        .tt-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 12px;
+        }
+        .tt-row span { color: #aaa; }
+        .tt-row b { color: #fff; }
+        .sem-dados { color: #888; font-style: italic; }
+
+        /* Legenda (embutida no SVG via D3) */
+        #legend { margin-top: 6px; }
+
+        /* Info panel */
+        .info-panel {
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .info-panel h3 { color: #333; font-size: 13px; margin-bottom: 8px; }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 22px; font-weight: bold; color: #bd0026; }
+        .stat-value.blue { color: #2171b5; }
+        .stat-label { font-size: 11px; color: #666; }
+
+        /* Fire stats */
+        .fire-stats {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 8px;
+            border-left: 4px solid #bd0026;
+        }
+        .fire-stats h4 { font-size: 12px; color: #8b0000; margin-bottom: 8px; }
+        .fire-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .fire-row span { color: #555; }
+        .fire-row b { color: #bd0026; }
+
+        /* Symbol styling */
+        .bubble-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .bubble-info h4 { font-size: 13px; color: #333; margin-bottom: 8px; }
+        .bubble-sample-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; color:#555;}
+        .bubble-circle { border-radius: 50%; background: rgba(229,57,53,0.55); border:1px solid #fff; }
+
+
+        /* Data source */
+        .data-source {
+            margin-top: 10px;
+            padding: 8px;
+            background: #e8f4fd;
+            border-radius: 7px;
+            font-size: 11px;
+            color: #555;
+        }
+        .data-source a { color: #2196F3; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 60px 40px; color: #666; }
+        .loading-spinner {
+            border: 4px solid #eee;
+            border-top: 4px solid #bd0026;
+            border-radius: 50%;
+            width: 38px; height: 38px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { color: #d32f2f; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Heatmap de Incêndios — MS</h1>
+    <p class="subtitle">
+        Dados geográficos: <a href="https://github.com/adolfoguimaraes/mapas_dataset" target="_blank">adolfoguimaraes/mapas_dataset</a>
+    </p>
+
+    <div class="main-layout">
+        <!-- Painel lateral -->
+        <div class="side-panel">
+            <div id="state-map-container"></div>
+
+            <div class="info-panel" id="info-panel" style="display:none">
+                <h3>📊 Municípios de MS</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value blue" id="total-municipios">-</div>
+                        <div class="stat-label">Total municípios</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="municipios-afetados">-</div>
+                        <div class="stat-label">Com incêndios</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fire-stats" id="fire-stats" style="display:none">
+                <h4>🔥 Dados de Incêndio</h4>
+                <div class="fire-row">
+                    <span>Total de ocorrências</span>
+                    <b id="total-ocorrencias">-</b>
+                </div>
+                <div class="fire-row">
+                    <span>Área total queimada</span>
+                    <b id="total-area">-</b>
+                </div>
+                <div class="fire-row">
+                    <span>Municípios no Brasil</span>
+                    <b id="total-brasil">-</b>
+                </div>
+            </div>
+
+            <div class="bubble-info" id="legend" style="display:none">
+                <h4>Mapa de Bolhas (Volume)</h4>
+                <div class="bubble-sample-row">
+                    <div class="bubble-circle" style="width: 10px; height: 10px;"></div>
+                    <div class="bubble-circle" style="width: 15px; height: 15px;"></div>
+                    <div class="bubble-circle" style="width: 22px; height: 22px;"></div>
+                </div>
+                <p style="font-size:10px; color:#777; margin-top:8px;">O tamanho aumenta com focos próximos</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="map-container">
+                <div id="loading" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando dados...</p>
+                </div>
+            </div>
+
+            <div class="data-source">
+                Fonte: CSV local (coordenadas de UPs + ocorrências de incêndio) e malhas públicas (IBGE/mapas_dataset).
+            </div>
+        </div>
+    </div>
+
+    <script src="ms-mapa.js"></script>
+</body>
+</html>
