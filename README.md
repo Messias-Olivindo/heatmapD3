@@ -1,186 +1,50 @@
 # Proposta de Visualização de Dados do NoFeling
 
----
-
 ## Visão Geral
 
-O projeto **NoFeling** desenvolve uma solução baseada em algoritmos de grafos para otimizar a seleção de bases operacionais que respondem a focos de incêndio florestal. Para isso, foi organizado em **três mini-projetos de visualização de dados**:
+O projeto **NoFeling** utiliza algoritmos de grafos para otimizar a seleção de bases operacionais no combate a incêndios florestais. Como parte estratégica desta solução, desenvolvemos uma interface de inteligência geoespacial focada na análise de focos de incêndio no estado do Mato Grosso do Sul.
 
-1. **Mini Projeto 1 — Tela de carregamento com grafos**: Demonstra visualmente como o algoritmo de otimização aloca recursos.
-
-2. **Mini Projeto 2 — Ícones Animados e Informativos no Mapa de Ocorrências**: Apresenta focos de incêndio em tempo real de forma interativa.
-
-3. **Mini Projeto 3 — Heatmap de ocorrências por municípios**: Oferece inteligência geoespacial para decisões estratégicas sobre realocação de recursos.
+O **Heatmap de ocorrências por municípios** fornece suporte à tomada de decisão executiva, permitindo a identificação rápida de *hotspots* para uma realocação de recursos mais eficiente e precisa.
 
 ---
 
-## Sumário
+## Heatmap de Ocorrências e Inteligência Geográfica
 
+### Objetivo e Público-Alvo
+Desenvolvido com foco na persona de **Douglas Guedes (Gerente Executivo de Inteligência Patrimonial)**, o mapa oferece uma leitura executiva e interativa da distribuição de incêndios. Ao identificar as regiões com maior densidade de ocorrências, a gestão pode propor estrategicamente novas localizações para bases, equipamentos e equipes.
 
-1. [Visão Geral](#visão-geral)
-2. [Mini Projeto 1 - Tela de carregamento com grafos](#mini-projeto-1)
-3. [Mini Projeto 2 - Ícones Animados e Informativos no Mapa de Ocorrências](#mini-projeto-2)
-4. [Mini Projeto 3 - Heatmap de ocorrências](#heatmap-de-ocorrências)
-5. [Equipes Responsáveis](#equipes-responsáveis)
+### Animação e interatividade em D3.js
 
+Para garantir uma experiência fluida e análises mais profundas, a visualização conta com as seguintes implementações avançadas em D3.js:
 
----
+* **Navegação Espacial (`d3.zoom`):** Implementação de funcionalidades de *pan* e *zoom* integradas ao mapa do Mato Grosso do Sul. Isso permite que o usuário aproxime regiões com alta densidade de bolhas para uma inspeção minuciosa de municípios vizinhos sem perder a resolução.
+* **Animação de Entrada (`.transition()`):** Os dados não aparecem de forma abrupta. Utilizamos transições suaves na renderização inicial, onde as bolhas de calor (representando o volume de incêndios) surgem de forma gradativa na tela, facilitando o mapeamento cognitivo da distribuição geográfica.
+* **Marcação de Áreas Críticas (`d3.drag` e `d3.quadtree`):** O usuário pode arrastar um "alfinete de atenção" pelo mapa. A funcionalidade de *drag* permite o reposicionamento livre, enquanto a *quadtree* atua nos bastidores para otimizar a performance, fazendo com que o alfinete identifique e se ancore rapidamente às áreas de risco mais próximas durante o movimento.
+* **Seleção de Focos (`d3.brush`):** Ferramenta de seleção de área. O gestor pode desenhar um retângulo de destaque (*brush*) sobre uma região específica do mapa para isolar e visualizar instantaneamente o consolidado de ocorrências de incêndio e a área total queimada apenas daquele recorte geográfico.
 
+### Arquitetura e Pipeline de Dados
 
-## Tela de carregamento com grafos
-
-
-### Descrição
-
-
-Essa visualização detalha brevemente uma simulação de como o algoritmo funciona. Alocando os rastreadores (bolinhas  a esquerda) às suas respectivas logísticas (bolinhas no meio) e, por fim, às unidades de produção (bolinhas a direita).
-
-
-### Visualizações Geradas
-
-
-#### Visualização 1 - Tela de carregamento com grafos
-
-
-| Campo            | Detalhe                              |
+| Componente       | Detalhe                              |
 |------------------|--------------------------------------|
-| **Tipo**         | Grafo |
-| **Fonte de dados** | Nome da base ou tabela utilizada   |
-| **Ferramenta**   | D3   |
+| **Tipo** | Mapa coroplético (heatmap) com sobreposição de bolhas proporcionais e controles interativos. |
+| **Fonte de Dados** | Incêndios por UP (`incendios_ups.csv`), localização de fazendas (`Fazendas_MS.csv`), geometrias de MS (GeoJSON / API IBGE). |
+| **Tecnologias** | D3.js v7, JavaScript, HTML5 Canvas. |
 
-
-
-
-**Exemplo de uso:** Poderá ser utilizado tanto para auxiliar visualmente na apresentação, quanto substituir a tela (load scene) de carregamento do algoritmo.
-
+1. **Processamento:** Integração das coordenadas das Unidades Produtivas com os mapas GeoJSON dos municípios de MS.
+2. **Geolocalização (`d3.geoContains`):** Validação de limites municipais para agrupar ocorrências e acumular a área total queimada.
+3. **Codificação Visual:** Aplicação de escala de cores quantitativa (saturação baseada no volume de incêndios) e *size encoding* (tamanho das bolhas proporcional à magnitude da área).
+4. **Tooltips:** Exibição de dados detalhados (UPs envolvidas, ocorrências e microrregião) em *hover*.
 
 ---
 
+### Como rodar
+
+- Baixe a extensão Live Server no VS Code.
+- Clique com o botão esquerdo no arquivo `ms-mapa.html` e selecione a opção *Open with Live Server*
+
+---
 
 ### Equipe Responsável
 
-
-| Nome              |
-|-------------------|
-| Maria Eduarda Oliveira  |
-|    Pedro Siqueira     |
-|     Thúlio Bacco    |
-
-
----
-
-
-## Icones Animados e Informativos no Mapa de Ocorrências
-
-
-### Descrição
-
-
-Essa visualização detalha brevemente no mapa as informações de icones e ocorrências.
-
-### Visualizações Geradas
-
-
-#### Visualização 2 — Icones Animados e Informativos no Mapa de Ocorrências
-
-
-| Campo            | Detalhe                              |
-|------------------|--------------------------------------|
-| **Tipo**         | Mapa |
-| **Fonte de dados** | Nome da base ou tabela utilizada   |
-| **Ferramenta**   | D3  |
-
-
-**Exemplo de uso:** Poderá ser utilizado tanto para auxiliar visualmente na apresentação, quanto substituir a tela (ocurrency map) de mapa de occorrências.
-
-
----
-
-
-### Equipe Responsável
-
-
-| Nome              |
-|-------------------|
-| Victor Garcia Dos Santos |
-|    Rafael Ryu Tati Nakahara     |
-
-
----
-
-
-## Heatmap de ocorrências
-
-
-### Descrição
-
-Esta visualização foi desenvolvida especificamente para atender à persona de **Douglas Guedes, Gerente Executivo de Inteligência Patrimonial**. O objetivo é oferecer uma leitura executiva da distribuição de incêndios, permitindo identificar as regiões com maior concentração de ocorrências por meio de um heatmap.
-
-No contexto ideal do projeto maior, a aplicação seria voltada para a análise de mais ocorrências por Unidade Produtiva. Como não temos dados exatos das UPs neste momento, o recorte adotado nesta entrega será o de mais ocorrências por cidades do Mato Grosso do Sul.
-
-**Relevância para o projeto de otimização de alocação de recursos:** 
-
-Embora este heatmap não seja diretamente uma solução de otimização, ele serve como ferramenta crítica de inteligência para apoiar a tomada de decisão executiva. A visualização permite que gestores como Douglas identifiquem rapidamente os pontos geográficos com maior densidade de incêndios, capacitando-os a propor novas localizações para posicionar recursos (bases, equipamentos e equipes) de forma estratégica. Quando novos recursos são alocados em posições baseadas nessa análise de hotspots, a efetividade geral da resposta aumenta, resultando em otimização indireta da alocação. Este efeito é especialmente pronunciado durante períodos de pico de incêndios, onde a qualidade da distribuição de recursos é mais crítica.
-
-**Proposta de evolução:** Para potencializar ainda mais o valor analítico desta visualização, sugere-se a implementação de um filtro temporal (barra de progressão deslizável) que permita aos executivos navegar através dos períodos históricos. Conforme o usuário avança ou retrocede na linha do tempo, o heatmap se atualiza dinamicamente para refletir a distribuição de incêndios naquele período específico, revelando padrões sazonais e tendências que informam decisões ainda mais precisas sobre posicionamento de recursos.
-
-
-### Visualizações Geradas
-
-
-#### Visualização 3.1 — Heatmap de ocorrências por cidades do MS
-
-
-| Campo            | Detalhe                              |
-|------------------|--------------------------------------|
-| **Tipo**         | Mapa coroplético (heatmap) com sobreposição de bolhas proporcionais |
-| **Fonte de dados** | Incêndios por UP (incendios_ups.csv), localização de fazendas/UPs (Fazendas_MS.csv), e geometrias de municípios MS (via GeoJSON e API IBGE) |
-| **Ferramenta**   | D3.js v7, JavaScript, HTML5 Canvas |
-
-
-**Implementação técnica:**
-
-O heatmap agrupa ocorrências de incêndios por município através de um pipeline de processamento geoespacial:
-
-1. **Carregamento de dados**: Integra dados de três fontes — (a) arquivo CSV com histórico de incêndios por UP, incluindo área queimada; (b) coordenadas geográficas das Unidades Produtivas; (c) mapas GeoJSON dos municípios de MS.
-
-2. **Geolocalização e agregação**: Para cada incêndio registrado, determina o município correspondente usando `d3.geoContains()` (testa se as coordenadas da UP caem dentro dos limites municipais), agrupa por município e acumula ocorrências e área total queimada.
-
-3. **Codificação visual**: Utiliza escala de cores (escala quantitativa) para colorir cada município conforme a densidade de incêndios — municípios com mais ocorrências recebem cores mais saturadas, enquanto áreas sem dados permanecem neutras. Além disso, renderiza bolhas proporcionais (size encoding) para reforçar visualmente a magnitude das ocorrências.
-
-4. **Interatividade**: Tooltip flutuante que exibe ao passar o mouse informações detalhadas de cada município (número de ocorrências, área afetada, microrregião, UPs envolvidas).
-
-**Exemplo de uso:** Executivos e gestores utilizam este heatmap para identificar rapidamente os municípios e regiões com maior recorrência de incêndios. Com essa inteligência geográfica, conseguem propor estrategicamente novos pontos de apoio, reposicionamento de equipes e realocação de recursos (equipamentos, veículos, pessoal) para áreas de maior demanda. A abordagem baseada em dados reduz desperdícios de recursos em zonas de baixa ocorrência e concentra esforços onde são mais necessários, contribuindo para otimização indireta da alocação de recursos. A futura inclusão de filtro temporal amplificaria este valor, permitindo análise de padrões sazonais e resposta adaptativa a ondas de incêndios.
-
-
----
-
-
-###  Equipe Responsável
-
-
-| Nome              |
-|-------------------|
-| Maria Clara Oliveira  |
-|    Messias Olivindo     |
-
-
----
-
-
-## Equipes Responsáveis
-
-
-Visão consolidada de todas as equipes envolvidas no projeto.
-
-
-| Mini Projeto      | Equipe       |
-|-------------------|----------------------|
-| Tela de carregamento com grafos    | Maria Eduarda, Pedro SIqueira e Thúlio Bacco       |
-| Icones Animados e Informativos no Mapa de Ocorrências   | Victor Garcia Dos Santos, Rafael Ryu Tati Nakahara      |
-| Heatmap de ocorrências    | Maria Clara Oliveira e Messias Olivindo       |
-
-
-
-
----
+* Maria Clara Oliveira
+* Messias Olivindo
