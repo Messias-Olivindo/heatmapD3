@@ -132,6 +132,15 @@
         .fire-row span { color: #555; }
         .fire-row b { color: #bd0026; }
 
+        .pin-stats {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff8e1;
+            border-radius: 8px;
+            border-left: 4px solid #f57f17;
+        }
+        .pin-stats h4 { font-size: 12px; color: #8a6d00; margin-bottom: 8px; }
+
         /* Symbol styling */
         .bubble-info {
             margin-top: 15px;
@@ -143,6 +152,35 @@
         .bubble-info h4 { font-size: 13px; color: #333; margin-bottom: 8px; }
         .bubble-sample-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; color:#555;}
         .bubble-circle { border-radius: 50%; background: rgba(229,57,53,0.55); border:1px solid #fff; }
+
+        .pin-launcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 8px 10px;
+            z-index: 1100;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .pin-launcher-emoji {
+            display: inline-block;
+            font-size: 34px;
+            cursor: grab;
+            user-select: none;
+            line-height: 1;
+        }
+
+        .pin-launcher-emoji:active { cursor: grabbing; }
+        .pin-launcher-label {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #666;
+            max-width: 120px;
+        }
 
 
         /* Data source */
@@ -214,6 +252,22 @@
                 </div>
             </div>
 
+            <div class="pin-stats" id="pin-stats" style="display:none">
+                <h4>📍 Alfinete de Atenção</h4>
+                <div class="fire-row">
+                    <span>Município ancorado</span>
+                    <b id="pin-municipio">-</b>
+                </div>
+                <div class="fire-row">
+                    <span>Ocorrências</span>
+                    <b id="pin-ocorrencias">-</b>
+                </div>
+                <div class="fire-row">
+                    <span>Área queimada</span>
+                    <b id="pin-area">-</b>
+                </div>
+            </div>
+
             <div class="bubble-info" id="legend" style="display:none">
                 <h4>Mapa de Bolhas (Volume)</h4>
                 <div class="bubble-sample-row">
@@ -222,6 +276,8 @@
                     <div class="bubble-circle" style="width: 22px; height: 22px;"></div>
                 </div>
                 <p style="font-size:10px; color:#777; margin-top:8px;">O tamanho aumenta com focos próximos</p>
+                <p style="font-size:10px; color:#777; margin-top:6px;"><strong>Alfinete:</strong> arraste o 📍 do canto superior direito do mapa</p>
+                <p style="font-size:10px; color:#777; margin-top:6px;"><strong>Excluir:</strong> clique no <strong>x</strong> vermelho de cada alfinete</p>
             </div>
 
             <div class="bubble-info">
@@ -233,6 +289,10 @@
 
         <div class="container">
             <div id="map-container">
+                <div class="pin-launcher" id="pin-launcher">
+                    <span id="pin-launcher-emoji" class="pin-launcher-emoji" title="Arraste para marcar no mapa">📍</span>
+                    <div class="pin-launcher-label">Arraste para criar alfinetes</div>
+                </div>
                 <div id="loading" class="loading">
                     <div class="loading-spinner"></div>
                     <p>Carregando dados...</p>

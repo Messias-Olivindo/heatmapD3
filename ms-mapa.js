@@ -20,6 +20,23 @@ let ups_data = [], incendios_data = [], incendiosPorMunicipio = {};
 let legendValues = [];
 let legendSelection = null;
 
+function formatHa(value) {
+    return `${Math.round(value || 0).toLocaleString('pt-BR')} ha`;
+}
+
+function updatePinPanel(pinData) {
+    const panel = document.getElementById('pin-stats');
+    if (!pinData) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    document.getElementById('pin-municipio').textContent = pinData.nome;
+    document.getElementById('pin-ocorrencias').textContent = pinData.total.toLocaleString('pt-BR');
+    document.getElementById('pin-area').textContent = formatHa(pinData.areaTotal);
+    panel.style.display = 'block';
+}
+
 function parseCoord(str) {
     if (!str) return NaN;
     return parseFloat(String(str).replace(',', '.'));
@@ -82,7 +99,7 @@ async function init() {
         document.getElementById('total-municipios').textContent = br_map_filter.length;
         document.getElementById('total-brasil').textContent = br_map.features.length;
         document.getElementById('total-ocorrencias').textContent = d3.sum(Object.values(incendiosPorMunicipio), d => d.total);
-        document.getElementById('total-area').textContent = Math.round(d3.sum(Object.values(incendiosPorMunicipio), d => d.areaTotal)).toLocaleString('pt-BR') + ' ha';
+        document.getElementById('total-area').textContent = formatHa(d3.sum(Object.values(incendiosPorMunicipio), d => d.areaTotal));
         document.getElementById('municipios-afetados').textContent = Object.keys(incendiosPorMunicipio).length;
 
         renderStateMap();
@@ -98,8 +115,8 @@ function renderStateMap() {
     cont.innerHTML = '';
     const width = 268, height = 240;
     const svg = d3.select(cont).append('svg').attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`);
-    
-    const proj = d3.geoMercator().fitSize([width-20, height-30], { type: "FeatureCollection", features: br_state_filter });
+
+    const proj = d3.geoMercator().fitSize([width - 20, height - 30], { type: "FeatureCollection", features: br_state_filter });
     const path = d3.geoPath().projection(proj);
 
     const g = svg.append('g').attr('transform', 'translate(10, 20)');
@@ -113,11 +130,11 @@ function renderStateMap() {
 
     const mBubbles = Object.keys(incendiosPorMunicipio).map(cd => {
         const feat = br_map_filter.find(f => f.properties.CD_MUN === cd);
-        if(!feat) return null;
+        if (!feat) return null;
         return { total: incendiosPorMunicipio[cd].total, coord: path.centroid(feat) };
     }).filter(d => d && !isNaN(d.coord[0]));
-    
-    mBubbles.sort((a,b) => b.total - a.total);
+
+    mBubbles.sort((a, b) => b.total - a.total);
 
     g.selectAll('.mini-bubble').data(mBubbles).enter().append('circle')
         .attr('cx', d => d.coord[0]).attr('cy', d => d.coord[1])
@@ -126,7 +143,7 @@ function renderStateMap() {
         .attr('stroke', '#fff').attr('stroke-width', 0.5)
         .attr('pointer-events', 'none');
 
-    svg.append('text').attr('x', width/2).attr('y', 15).attr('text-anchor', 'middle')
+    svg.append('text').attr('x', width / 2).attr('y', 15).attr('text-anchor', 'middle')
         .attr('font-size', '13px').attr('font-weight', 'bold').attr('fill', '#333').text('Regiões Atingidas');
 }
 
@@ -136,28 +153,31 @@ function renderHeatmap() {
     if (oldSvg) oldSvg.remove();
 
     const svg = d3.select(cont).append('svg').attr('width', CONFIG.width).attr('height', CONFIG.height).attr('viewBox', `0 0 ${CONFIG.width} ${CONFIG.height}`).style('max-width', '100%').style('height', 'auto');
-    
-    const proj = d3.geoMercator().fitSize([CONFIG.width-60, CONFIG.height-80], { type: "FeatureCollection", features: br_map_filter });
+
+    const innerWidth = CONFIG.width - 60;
+    const innerHeight = CONFIG.height - 80;
+    const proj = d3.geoMercator().fitSize([innerWidth, innerHeight], { type: "FeatureCollection", features: br_map_filter });
     const path = d3.geoPath().projection(proj);
 
     const gZoom = svg.append('g');
-    
+    const interactionLayer = svg.append('g').attr('class', 'interaction-layer').style('pointer-events', 'none');
+
     const g = gZoom.append('g').attr('transform', 'translate(30, 40)');
 
     const zoom = d3.zoom()
-        .scaleExtent([1, 5]) 
+        .scaleExtent([1, 5])
         .translateExtent([[0, 0], [CONFIG.width, CONFIG.height]])
         .on('zoom', (event) => {
             gZoom.attr('transform', event.transform);
             if (activeBubble) positionTooltip(activeBubble);
         });
-    
-    svg.call(zoom);
-    
-    let tooltip = d3.select(cont).select('.tooltip');
-    if(tooltip.empty()) tooltip = d3.select(cont).append('div').attr('class', 'tooltip');
 
-    let activeBubble = null; 
+    svg.call(zoom);
+
+    let tooltip = d3.select(cont).select('.tooltip');
+    if (tooltip.empty()) tooltip = d3.select(cont).append('div').attr('class', 'tooltip');
+
+    let activeBubble = null;
 
     const positionTooltip = (d) => {
         const t = d3.zoomTransform(svg.node());
@@ -169,8 +189,8 @@ function renderHeatmap() {
         .attr('class', 'municipio').attr('d', path)
         .attr('fill', CONFIG.corSemDados).attr('fill-opacity', 0)
         .attr('stroke', '#fff').attr('stroke-width', 0.8)
-        .on('mouseover', function(){ d3.select(this).attr('fill', '#d4d4d4'); })
-        .on('mouseout', function(){ d3.select(this).attr('fill', CONFIG.corSemDados); });
+        .on('mouseover', function () { d3.select(this).attr('fill', '#d4d4d4'); })
+        .on('mouseout', function () { d3.select(this).attr('fill', CONFIG.corSemDados); });
 
     municipioPaths.transition()
         .duration(900)
@@ -179,7 +199,7 @@ function renderHeatmap() {
 
     const bubbles = Object.keys(incendiosPorMunicipio).map(cd => {
         const feat = br_map_filter.find(f => f.properties.CD_MUN === cd);
-        if(!feat) return null;
+        if (!feat) return null;
         const [x, y] = path.centroid(feat);
         return {
             cd, x, y,
@@ -191,36 +211,43 @@ function renderHeatmap() {
         };
     }).filter(d => d && !isNaN(d.x));
 
-    bubbles.sort((a,b) => b.total - a.total);
+    bubbles.sort((a, b) => b.total - a.total);
 
     const maxI = d3.max(bubbles, d => d.total) || 1;
     const rScale = d3.scaleSqrt().domain([0, maxI]).range([4, 38]);
+    const bubblesByCd = new Map(bubbles.map(d => [d.cd, d]));
+    const bubblesTree = d3.quadtree().x(d => d.x).y(d => d.y).addAll(bubbles);
 
     const bubbleSelection = g.selectAll('.bubble').data(bubbles).enter().append('circle')
         .attr('class', 'bubble')
         .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', 0)
         .attr('fill', '#e53935').attr('fill-opacity', 0).attr('stroke', '#fff').attr('stroke-width', 1.5)
         .style('cursor', 'pointer')
-        .on('mouseover', function(event, d) {
-            d3.select(this).attr('stroke', '#333').attr('stroke-width', 2).attr('fill-opacity', 0.9).raise();
-            
+        .on('mouseover', function (event, d) {
+            d3.select(this).attr('stroke', '#333').attr('stroke-width', 2).attr('fill-opacity', 0.9);
+
             activeBubble = d;
             tooltip.style('opacity', 1).html(`
                <strong>🔥 ${d.nome}</strong>
                <div class="tt-row"><span>Ocorrências unidas:</span><b>${d.total}</b></div>
                <div class="tt-row"><span>Área estim.:</span><b>${Math.round(d.areaTotal).toLocaleString('pt-BR')} ha</b></div>
                <div class="tt-row"><span>UPs com focos:</span><b>${d.upsCount}</b></div>
-               ${d.micro ? `<div class="tt-row"><span>Região:</span><b>${d.micro}</b></div>`:''}
+               ${d.micro ? `<div class="tt-row"><span>Região:</span><b>${d.micro}</b></div>` : ''}
             `);
 
             positionTooltip(d);
             highlightLegend(d.total);
+            pinLayer.raise();
         })
-        .on('mousemove', function(event, d) {
+        .on('mousemove', function (event, d) {
             positionTooltip(d);
         })
-        .on('mouseout', function(event, d) {
-            d3.select(this).attr('stroke', '#fff').attr('stroke-width', 1.5).attr('fill-opacity', 0.55);
+        .on('mouseout', function (event, d) {
+            const isPinned = pins.some(p => p.targetCd === d.cd);
+            d3.select(this)
+                .attr('stroke', isPinned ? '#111' : '#fff')
+                .attr('stroke-width', isPinned ? 3 : 1.5)
+                .attr('fill-opacity', 0.55);
             tooltip.style('opacity', 0);
             activeBubble = null;
             highlightLegend(null);
@@ -229,13 +256,227 @@ function renderHeatmap() {
     const durationScale = d3.scaleLinear().domain([0, maxI]).range([650, 1700]);
 
     bubbleSelection.transition()
-        .delay((d,i) => i * 10)
+        .delay((d, i) => i * 10)
         .duration(d => durationScale(d.total))
         .ease(d3.easeBackOut)
         .attr('r', d => rScale(d.total))
         .attr('fill-opacity', 0.55);
 
-    svg.append('text').attr('x', CONFIG.width/2).attr('y', 25).attr('text-anchor', 'middle')
+    const pinLayer = g.append('g').attr('class', 'pin-layer');
+    const pinOverlayLayer = g.append('g').attr('class', 'pin-overlay-layer').style('pointer-events', 'none');
+    let pinSequence = 0;
+    const pins = [];
+    let pinsTree = d3.quadtree().x(d => d.x).y(d => d.y);
+
+    const pinInfoOverlay = pinOverlayLayer.append('g').attr('opacity', 0);
+    const pinInfoBg = pinInfoOverlay.append('rect')
+        .attr('rx', 7)
+        .attr('ry', 7)
+        .attr('fill', 'rgba(20,20,20,0.92)')
+        .attr('stroke', '#f57f17')
+        .attr('stroke-width', 1.2);
+    const pinInfoText = pinInfoOverlay.append('text')
+        .attr('fill', '#f5f5f5')
+        .attr('font-size', 11)
+        .attr('text-anchor', 'middle');
+
+    function hidePinInfoOverlay() {
+        pinInfoOverlay.attr('opacity', 0);
+    }
+
+    function showPinInfoOverlay(pinData) {
+        const pinTarget = bubblesByCd.get(pinData.targetCd);
+        if (!pinTarget) {
+            hidePinInfoOverlay();
+            return;
+        }
+
+        pinInfoText.selectAll('tspan').remove();
+        pinInfoText.append('tspan')
+            .attr('x', 0)
+            .attr('dy', 0)
+            .attr('fill', '#ffcc80')
+            .attr('font-weight', 'bold')
+            .text(pinTarget.nome);
+        pinInfoText.append('tspan')
+            .attr('x', 0)
+            .attr('dy', 14)
+            .text(`Ocorrências: ${pinTarget.total.toLocaleString('pt-BR')}`);
+        pinInfoText.append('tspan')
+            .attr('x', 0)
+            .attr('dy', 14)
+            .text(`Área: ${formatHa(pinTarget.areaTotal)}`);
+
+        const bbox = pinInfoText.node().getBBox();
+        const paddingX = 8;
+        const paddingY = 6;
+
+        pinInfoBg
+            .attr('x', bbox.x - paddingX)
+            .attr('y', bbox.y - paddingY)
+            .attr('width', bbox.width + paddingX * 2)
+            .attr('height', bbox.height + paddingY * 2);
+
+        pinInfoOverlay
+            .attr('transform', `translate(${pinData.x}, ${pinData.y - 48})`)
+            .attr('opacity', 1)
+            .raise();
+    }
+
+    function rebuildPinsTree() {
+        pinsTree = d3.quadtree().x(d => d.x).y(d => d.y).addAll(pins);
+    }
+
+    function nearestBubble(x, y) {
+        return bubblesTree.find(x, y, 55);
+    }
+
+    function refreshPinnedHighlights() {
+        const pinnedCds = new Set(pins.map(p => p.targetCd));
+        bubbleSelection
+            .attr('stroke', d => (pinnedCds.has(d.cd) ? '#111' : '#fff'))
+            .attr('stroke-width', d => (pinnedCds.has(d.cd) ? 3 : 1.5));
+        pinLayer.raise();
+        pinOverlayLayer.raise();
+    }
+
+    function renderPins() {
+        const pinGroups = pinLayer.selectAll('g.pin-item').data(pins, d => d.id);
+        const pinEnter = pinGroups.enter().append('g').attr('class', 'pin-item');
+
+        pinEnter.append('text')
+            .attr('class', 'pin-emoji')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .attr('font-size', 28)
+            .text('📍');
+
+        pinEnter.append('circle')
+            .attr('class', 'pin-remove-bg')
+            .attr('cx', 11)
+            .attr('cy', -11)
+            .attr('r', 7)
+            .attr('fill', '#d32f2f')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1.2)
+            .style('cursor', 'pointer')
+            .on('click', function (event, d) {
+                event.stopPropagation();
+                const idx = pins.findIndex(p => p.id === d.id);
+                if (idx >= 0) pins.splice(idx, 1);
+                renderPins();
+                refreshPinnedHighlights();
+                updatePinPanel(null);
+                hidePinInfoOverlay();
+            });
+
+        pinEnter.append('text')
+            .attr('class', 'pin-remove-x')
+            .attr('x', 11)
+            .attr('y', -11)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .attr('font-size', 10)
+            .attr('font-weight', 'bold')
+            .attr('fill', '#fff')
+            .style('pointer-events', 'none')
+            .text('×');
+
+        pinGroups.merge(pinEnter)
+            .attr('transform', d => `translate(${d.x}, ${d.y})`);
+
+        pinGroups.exit().remove();
+        rebuildPinsTree();
+        pinLayer.raise();
+        pinOverlayLayer.raise();
+    }
+
+    function applyPin(x, y, snap = true) {
+        const clampedX = Math.max(0, Math.min(innerWidth, x));
+        const clampedY = Math.max(0, Math.min(innerHeight, y));
+        const nearest = snap ? nearestBubble(clampedX, clampedY) : null;
+        if (!nearest) return;
+
+        const pinData = {
+            id: `pin-${++pinSequence}`,
+            x: nearest.x,
+            y: nearest.y,
+            targetCd: nearest.cd
+        };
+
+        pins.push(pinData);
+        renderPins();
+        updatePinPanel(null);
+        refreshPinnedHighlights();
+        hidePinInfoOverlay();
+    }
+
+    pinLayer
+        .on('mousemove', (event) => {
+            if (!pins.length) {
+                updatePinPanel(null);
+                hidePinInfoOverlay();
+                return;
+            }
+            const [px, py] = d3.pointer(event, pinLayer.node());
+            const picked = pinsTree.find(px, py, 16);
+            if (!picked) {
+                updatePinPanel(null);
+                hidePinInfoOverlay();
+                return;
+            }
+            updatePinPanel(bubblesByCd.get(picked.targetCd) || null);
+            showPinInfoOverlay(picked);
+        })
+        .on('mouseleave', () => {
+            updatePinPanel(null);
+            hidePinInfoOverlay();
+        });
+
+    const launcher = d3.select('#pin-launcher-emoji');
+    let dragGhost = null;
+
+    function updateGhostPosition(sourceEvent) {
+        if (!dragGhost || !sourceEvent) return;
+        const [sx, sy] = d3.pointer(sourceEvent, svg.node());
+        dragGhost.attr('x', sx).attr('y', sy);
+    }
+
+    if (!launcher.empty()) {
+        launcher.call(
+            d3.drag()
+                .on('start', (event) => {
+                    event.sourceEvent.stopPropagation();
+                    dragGhost = interactionLayer.append('text')
+                        .attr('text-anchor', 'middle')
+                        .attr('dominant-baseline', 'middle')
+                        .attr('font-size', 34)
+                        .attr('opacity', 0.9)
+                        .text('📍');
+                    updateGhostPosition(event.sourceEvent);
+                })
+                .on('drag', (event) => {
+                    updateGhostPosition(event.sourceEvent);
+                })
+                .on('end', (event) => {
+                    const [sx, sy] = d3.pointer(event.sourceEvent, svg.node());
+                    if (dragGhost) {
+                        dragGhost.remove();
+                        dragGhost = null;
+                    }
+
+                    if (sx < 0 || sx > CONFIG.width || sy < 0 || sy > CONFIG.height) return;
+
+                    const zoomTransform = d3.zoomTransform(svg.node());
+                    const [ux, uy] = zoomTransform.invert([sx, sy]);
+                    const gx = ux - 30;
+                    const gy = uy - 40;
+                    applyPin(gx, gy, true);
+                })
+        );
+    }
+
+    svg.append('text').attr('x', CONFIG.width / 2).attr('y', 25).attr('text-anchor', 'middle')
         .attr('font-size', '18px').attr('font-weight', 'bold').attr('fill', '#222')
         .text('Mapa de Bolhas (Proportional Symbol) - MS');
 
@@ -243,29 +484,29 @@ function renderHeatmap() {
 }
 
 function renderProportionalLegend(svg, rScale, maxVal) {
-    const values = [Math.max(1, Math.ceil(maxVal*0.1)), Math.ceil(maxVal*0.5), maxVal].filter((v,i,a)=> a.indexOf(v)===i);
+    const values = [Math.max(1, Math.ceil(maxVal * 0.1)), Math.ceil(maxVal * 0.5), maxVal].filter((v, i, a) => a.indexOf(v) === i);
     legendValues = values;
     const lgX = CONFIG.width - 120, lgY = CONFIG.height - 40;
     const g = svg.append('g').attr('transform', `translate(${lgX}, ${lgY})`);
 
-    g.append('text').attr('y', -(rScale(maxVal)*2) - 15).attr('text-anchor','middle')
-     .attr('font-size','12px').attr('fill','#444').attr('font-weight', 'bold').text('Ocorrências');
+    g.append('text').attr('y', -(rScale(maxVal) * 2) - 15).attr('text-anchor', 'middle')
+        .attr('font-size', '12px').attr('fill', '#444').attr('font-weight', 'bold').text('Ocorrências');
 
     legendSelection = g.selectAll('circle.legend-c').data(values).enter().append('circle')
-     .attr('class', 'legend-c')
-     .attr('cy', d => -rScale(d)).attr('r', d => rScale(d))
-     .attr('fill', 'none').attr('stroke', '#999').attr('stroke-dasharray', '2,2')
-     .attr('stroke-width', 1);
-    
+        .attr('class', 'legend-c')
+        .attr('cy', d => -rScale(d)).attr('r', d => rScale(d))
+        .attr('fill', 'none').attr('stroke', '#999').attr('stroke-dasharray', '2,2')
+        .attr('stroke-width', 1);
+
     g.selectAll('line.legend-l').data(values).enter().append('line')
-     .attr('class', 'legend-l')
-     .attr('x1', 0).attr('y1', d => -rScale(d)*2).attr('x2', 45).attr('y2', d => -rScale(d)*2)
-     .attr('stroke', '#aaa').attr('stroke-dasharray', '2,2');
+        .attr('class', 'legend-l')
+        .attr('x1', 0).attr('y1', d => -rScale(d) * 2).attr('x2', 45).attr('y2', d => -rScale(d) * 2)
+        .attr('stroke', '#aaa').attr('stroke-dasharray', '2,2');
 
     g.selectAll('text.val').data(values).enter().append('text')
-     .attr('class', 'val')
-     .attr('x', 50).attr('y', d => -rScale(d)*2 + 4)
-     .attr('font-size', '11px').attr('fill', '#444').text(d => d);
+        .attr('class', 'val')
+        .attr('x', 50).attr('y', d => -rScale(d) * 2 + 4)
+        .attr('font-size', '11px').attr('fill', '#444').text(d => d);
 }
 
 function highlightLegend(total) {
